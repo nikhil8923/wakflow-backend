@@ -204,33 +204,33 @@ router.put("/admin/convert-lead/:id", async (req, res) => {
 });
 
 
-// ================= DASHBOARD =================
 router.get("/dashboard/:userId", async (req, res) => {
   try {
     const user = await User.findById(req.params.userId);
-    if (!user) return res.json({ message: "User not found" });
+    if (!user) {
+      return res.json({ message: "User not found" });
+    }
 
-    const leads = await Lead.find({ affiliateId: user._id });
+    const leads = await Lead.find({ affiliateId: req.params.userId });
 
     const totalLeads = leads.length;
     const convertedLeads = leads.filter(l => l.status === "converted").length;
     const conversionRate = totalLeads === 0 ? 0 : Math.round((convertedLeads / totalLeads) * 100);
 
     res.json({
-      name: user.name,
-      referralCode: user.referralCode,
-      discount: user.discount,
-      referrals: user.referrals,
-      earnings: user.earnings,
-      totalLeads,
-      conversionRate,
-      leads
+      name: user.name || "",
+      referralCode: user.referralCode || "",
+      discount: user.discount || 0,
+      referrals: user.referrals || 0,
+      earnings: user.earnings || 0,
+      totalLeads: totalLeads,
+      conversionRate: conversionRate,
+      leads: leads || []
     });
 
   } catch (error) {
-    console.log(error);
+    console.log("Dashboard Error:", error);
     res.status(500).json({ message: "Dashboard error" });
   }
 });
-
 export default router;

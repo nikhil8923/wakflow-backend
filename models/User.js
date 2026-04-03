@@ -12,6 +12,8 @@ const userSchema = new mongoose.Schema({
   referrals: { type: Number, default: 0 },
   discount: { type: Number, default: 10 },
   earnings: { type: Number, default: 0 },
+  totalLeads: { type: Number, default: 0 },
+  totalClosedLeads: { type: Number, default: 0 },  
 
   plan: { type: String, default: "None" },
   planPrice: { type: Number, default: 0 },
