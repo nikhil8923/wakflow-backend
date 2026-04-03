@@ -190,16 +190,31 @@ Service: ${service}`
 });
 
 
-// ================= USER DASHBOARD DATA =================
 router.get("/dashboard/:userId", async (req, res) => {
-  const user = await User.findById(req.params.userId);
+  try {
+    const user = await User.findById(req.params.userId);
 
-  res.json({
-    referralCode: user.referralCode,
-    discount: user.discount,
-    referrals: user.referrals,
-    earnings: user.earnings
-  });
+    // Get leads referred by this user
+    const leads = await Lead.find({ affiliateId: user._id });
+
+    const totalLeads = leads.length;
+    const convertedLeads = leads.filter(l => l.status === "converted").length;
+    const conversionRate = totalLeads === 0 ? 0 : Math.round((convertedLeads / totalLeads) * 100);
+
+    res.json({
+      name: user.name,
+      referralCode: user.referralCode,
+      discount: user.discount,
+      referrals: user.referrals,
+      earnings: user.earnings,
+      totalLeads: totalLeads,
+      conversionRate: conversionRate,
+      leads: leads
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: "Dashboard error" });
+  }
 });
 
 

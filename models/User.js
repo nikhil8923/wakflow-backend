@@ -21,9 +21,17 @@ const userSchema = new mongoose.Schema({
   retainer: { type: Boolean, default: false },
   retainerPrice: { type: Number, default: 0 },
 
-  // ADD THESE TWO
+  // Roles
   role: { type: String, default: "affiliate" }, // affiliate / admin
+
+  // Password reset
   resetOTP: Number,
+
+  // ===== ADD THESE FOR REFERRAL SYSTEM =====
+  totalLeads: { type: Number, default: 0 },
+  totalClosedLeads: { type: Number, default: 0 },
+  commissionRate: { type: Number, default: 10 }, // % commission
+  wallet: { type: Number, default: 0 }, // withdrawable amount
 
   createdAt: { type: Date, default: Date.now }
 });
