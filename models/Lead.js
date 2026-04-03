@@ -1,18 +1,37 @@
-import mongoose from "mongoose";
+import express from "express";
+import Lead from "../models/Lead.js";
 
-const leadSchema = new mongoose.Schema({
-  name: String,
-  email: String,
-  phone: String,
-  service: String,
-  status: { type: String, default: "new" },
-   userId: String, 
+const router = express.Router();
 
-  referredBy: String,   // referral code
-  affiliateId: String,  // user who referred
-   commission: { type: Number, default: 0 }, 
-
-  createdAt: { type: Date, default: Date.now }
+// Save Lead
+router.post("/send-lead", async (req, res) => {
+  try {
+    const lead = new Lead(req.body);
+    await lead.save();
+    res.status(200).json({ message: "Lead saved successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Error saving lead" });
+  }
 });
 
-export default mongoose.model("Lead", leadSchema);
+// Get All Leads (for Admin)
+router.get("/leads", async (req, res) => {
+  try {
+    const leads = await Lead.find().sort({ createdAt: -1 });
+    res.json(leads);
+  } catch (error) {
+    res.status(500).json({ error: "Error fetching leads" });
+  }
+});
+
+// Delete Lead
+router.delete("/leads/:id", async (req, res) => {
+  try {
+    await Lead.findByIdAndDelete(req.params.id);
+    res.json({ message: "Lead deleted" });
+  } catch (error) {
+    res.status(500).json({ error: "Error deleting lead" });
+  }
+});
+
+export default router;
