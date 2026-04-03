@@ -50,12 +50,11 @@ router.post("/signup", async (req, res) => {
       referrals: 0,
       discount: discount,
       earnings: 0,
-      role: "affiliate"
+      role: "user"
     });
 
     await user.save();
 
-    // Send welcome email
     await sendEmail(
       email,
       "Welcome to Wakflow 🚀",
@@ -79,25 +78,6 @@ https://wakflow.com/login.html
         refUser.referrals += 1;
         refUser.earnings += 100;
         await refUser.save();
-
-        await sendEmail(
-          refUser.email,
-          "You Got a New Referral 🎉",
-          `Someone signed up using your referral code.
-You earned ₹100.`
-        );
-
-        const today = new Date().toISOString().slice(0, 10);
-
-        const analytics = new Analytics({
-          userId: refUser._id,
-          date: today,
-          leads: 1,
-          conversions: 1,
-          revenue: 100
-        });
-
-        await analytics.save();
       }
     }
 
@@ -131,10 +111,12 @@ router.post("/login", async (req, res) => {
       { expiresIn: "1d" }
     );
 
+    // IMPORTANT: Added referralCode in response
     res.json({
       token: token,
       userId: user._id,
-      role: user.role
+      role: user.role,
+      referralCode: user.referralCode
     });
 
   } catch (error) {
@@ -162,23 +144,14 @@ router.post("/lead", async (req, res) => {
       referredBy: referralCode || null,
       affiliateId: affiliate ? affiliate._id : null,
       userId: userId || null,
-      status: "new",
-      commission: 0
+      status: "new"
     });
 
     await lead.save();
 
     if (affiliate) {
-      await sendEmail(
-        affiliate.email,
-        "New Lead Received - Wakflow",
-        `You received a new lead:
-
-Name: ${name}
-Email: ${email}
-Phone: ${phone}
-Service: ${service}`
-      );
+      affiliate.totalLeads = (affiliate.totalLeads || 0) + 1;
+      await affiliate.save();
     }
 
     res.json({ message: "Lead saved successfully" });
@@ -187,66 +160,6 @@ Service: ${service}`
     console.log("Lead Error:", error);
     res.status(500).json({ message: "Server error" });
   }
-});
-
-
-router.get("/dashboard/:userId", async (req, res) => {
-  try {
-    const user = await User.findById(req.params.userId);
-
-    // Get leads referred by this user
-    const leads = await Lead.find({ affiliateId: user._id });
-
-    const totalLeads = leads.length;
-    const convertedLeads = leads.filter(l => l.status === "converted").length;
-    const conversionRate = totalLeads === 0 ? 0 : Math.round((convertedLeads / totalLeads) * 100);
-
-    res.json({
-      name: user.name,
-      referralCode: user.referralCode,
-      discount: user.discount,
-      referrals: user.referrals,
-      earnings: user.earnings,
-      totalLeads: totalLeads,
-      conversionRate: conversionRate,
-      leads: leads
-    });
-
-  } catch (error) {
-    res.status(500).json({ message: "Dashboard error" });
-  }
-});
-
-
-// ================= USER LEADS FOR DASHBOARD =================
-router.get("/dashboard/leads/:userId", async (req, res) => {
-  try {
-    const leads = await Lead.find({ affiliateId: req.params.userId });
-    res.json(leads);
-  } catch (error) {
-    res.json({ message: "Error fetching leads" });
-  }
-});
-
-
-// ================= ADMIN STATS =================
-router.get("/admin/stats", async (req, res) => {
-  const users = await User.find();
-  const leads = await Lead.find();
-
-  res.json({
-    totalUsers: users.length,
-    totalLeads: leads.length,
-    totalReferrals: users.reduce((sum, u) => sum + (u.referrals || 0), 0),
-    totalEarnings: users.reduce((sum, u) => sum + (u.earnings || 0), 0)
-  });
-});
-
-
-// ================= ADMIN ALL USERS =================
-router.get("/admin/users", async (req, res) => {
-  const users = await User.find();
-  res.json(users);
 });
 
 
@@ -267,25 +180,56 @@ router.put("/admin/lead-status/:leadId", async (req, res) => {
 
 // ================= CONVERT LEAD =================
 router.put("/admin/convert-lead/:id", async (req, res) => {
+  const lead = await Lead.findById(req.params.id);
+  if (!lead) return res.json({ message: "Lead not found" });
+
+  lead.status = "converted";
+
+  if (lead.affiliateId) {
+    const user = await User.findById(lead.affiliateId);
+
+    const commission = 5000;
+    lead.commission = commission;
+
+    user.referrals += 1;
+    user.earnings += commission;
+    user.totalClosedLeads = (user.totalClosedLeads || 0) + 1;
+
+    await user.save();
+  }
+
+  await lead.save();
+
+  res.json({ message: "Lead converted & commission added" });
+});
+
+
+// ================= DASHBOARD =================
+router.get("/dashboard/:userId", async (req, res) => {
   try {
-    const lead = await Lead.findById(req.params.id);
-    if (!lead) return res.json({ message: "Lead not found" });
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.json({ message: "User not found" });
 
-    lead.status = "converted";
-    lead.commission = 5000;
-    await lead.save();
+    const leads = await Lead.find({ affiliateId: user._id });
 
-    if (lead.affiliateId) {
-      const user = await User.findById(lead.affiliateId);
-      user.referrals += 1;
-      user.earnings += 5000;
-      await user.save();
-    }
+    const totalLeads = leads.length;
+    const convertedLeads = leads.filter(l => l.status === "converted").length;
+    const conversionRate = totalLeads === 0 ? 0 : Math.round((convertedLeads / totalLeads) * 100);
 
-    res.json({ message: "Lead converted & commission added" });
+    res.json({
+      name: user.name,
+      referralCode: user.referralCode,
+      discount: user.discount,
+      referrals: user.referrals,
+      earnings: user.earnings,
+      totalLeads,
+      conversionRate,
+      leads
+    });
 
   } catch (error) {
-    res.json({ message: "Error converting lead" });
+    console.log(error);
+    res.status(500).json({ message: "Dashboard error" });
   }
 });
 
