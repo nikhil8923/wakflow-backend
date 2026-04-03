@@ -203,34 +203,28 @@ router.put("/admin/convert-lead/:id", async (req, res) => {
   res.json({ message: "Lead converted & commission added" });
 });
 
-
+// ===================== DASHBOARD =====================
 router.get("/dashboard/:userId", async (req, res) => {
   try {
     const user = await User.findById(req.params.userId);
-    if (!user) {
-      return res.json({ message: "User not found" });
-    }
+    const leads = await Lead.find({ referredBy: user.referralCode });
 
-    const leads = await Lead.find({ affiliateId: req.params.userId });
-
-    const totalLeads = leads.length;
-    const convertedLeads = leads.filter(l => l.status === "converted").length;
-    const conversionRate = totalLeads === 0 ? 0 : Math.round((convertedLeads / totalLeads) * 100);
+    const conversions = leads.filter(l => l.status === "active").length;
+    const earnings = leads.reduce((sum, l) => sum + (l.commission || 0), 0);
 
     res.json({
-      name: user.name || "",
-      referralCode: user.referralCode || "",
-      discount: user.discount || 0,
-      referrals: user.referrals || 0,
-      earnings: user.earnings || 0,
-      totalLeads: totalLeads,
-      conversionRate: conversionRate,
-      leads: leads || []
+      name: user.name,
+      referralCode: user.referralCode,
+      referrals: leads.length,
+      conversionRate: leads.length ? ((conversions / leads.length) * 100).toFixed(1) : 0,
+      earnings: earnings,
+      leads: leads
     });
 
-  } catch (error) {
-    console.log("Dashboard Error:", error);
+  } catch (err) {
     res.status(500).json({ message: "Dashboard error" });
   }
 });
+
+  
 export default router;

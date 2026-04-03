@@ -43,13 +43,14 @@ router.post("/lead", async (req, res) => {
 });
 
 
-// Get leads for user dashboard (ONLY referred leads)
+// Get leads by referral code (for user dashboard)
 router.get("/leads/user/:userId", async (req, res) => {
   try {
-    const leads = await Lead.find({ affiliateId: req.params.userId });
+    const user = await User.findById(req.params.userId);
+    const leads = await Lead.find({ referredBy: user.referralCode }).sort({ createdAt: -1 });
     res.json(leads);
   } catch (error) {
-    res.status(500).json({ message: "Error fetching leads" });
+    res.status(500).json({ error: "Error fetching user leads" });
   }
 });
 
