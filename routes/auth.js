@@ -50,12 +50,12 @@ router.post("/signup", async (req, res) => {
       referrals: 0,
       discount: discount,
       earnings: 0,
-      role: "user"
+      role: "affiliate"
     });
 
     await user.save();
 
-    await sendEmail(
+    sendEmail(
       email,
       "Welcome to Wakflow 🚀",
       `Hello ${name},
@@ -66,7 +66,7 @@ Your referral code: ${myReferralCode}
 Your discount: ${discount}%
 
 Login here:
-https://wakflow.com/login.html
+https://wakflow.com/auth/login.html
 
 - Team Wakflow`
     );
