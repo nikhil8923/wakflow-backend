@@ -3,6 +3,9 @@ import mongoose from "mongoose";
 import cors from "cors";
 import authRoutes from "./routes/auth.js";
 import leadRoutes from "./routes/lead.js";
+import dotenv from "dotenv";
+
+
 dotenv.config();
 const app = express();   // MUST COME BEFORE app.use
 
