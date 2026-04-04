@@ -57,13 +57,29 @@ router.post("/signup", async (req, res) => {
 
     await user.save();
 
-    // Send email in background (IMPORTANT)
+    // Referral reward (FIXED - moved inside route)
+    if (referralCode) {
+      const refUser = await User.findOne({ referralCode: referralCode });
+      if (refUser) {
+        refUser.referrals += 1;
+        refUser.earnings += 100;
+        await refUser.save();
+      }
+    }
+
+    // Send email in background
     sendEmail(
       email,
       "Welcome to Wakflow 🚀",
       `Hello ${name},
+
 Your referral code: ${myReferralCode}
-Your discount: ${discount}%`
+Your discount: ${discount}%
+
+Login here:
+https://wakflow.com/auth/login.html
+
+- Team Wakflow`
     ).catch(err => console.log("Email error:", err));
 
     return res.json({
@@ -77,18 +93,6 @@ Your discount: ${discount}%`
     return res.status(500).json({ message: "Signup error" });
   }
 });
-
-    // Referral reward
-    if (referralCode) {
-      const refUser = await User.findOne({ referralCode: referralCode });
-      if (refUser) {
-        refUser.referrals += 1;
-        refUser.earnings += 100;
-        await refUser.save();
-      }
-    }
-    
-   
 
   
 
