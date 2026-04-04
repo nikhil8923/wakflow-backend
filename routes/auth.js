@@ -11,30 +11,11 @@ const router = express.Router();
 
 // ================= SIGNUP =================
 router.post("/signup", async (req, res) => {
-  const { name, email, password, referralCode, phone } = req.body;
-
   try {
-    const nameRegex = /^[A-Za-z ]{3,}$/;
-    if (!nameRegex.test(name)) {
-      return res.json({ message: "Name must contain only letters and min 3 characters" });
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.json({ message: "Invalid email format" });
-    }
-
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
-    if (!passwordRegex.test(password)) {
-      return res.json({
-        message: "Password must be 8+ chars with uppercase, lowercase, number & special character"
-      });
-    }
+    const { name, email, password, phone, referralCode } = req.body;
 
     const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.json({ message: "User already exists" });
-    }
+    if (userExists) return res.json({ message: "User already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -50,16 +31,16 @@ router.post("/signup", async (req, res) => {
       referralCode: myReferralCode,
       referredBy: referralCode || null,
       referrals: 0,
-      discount: discount,
+      discount,
       earnings: 0,
       role: "affiliate"
     });
 
     await user.save();
 
-    // Referral reward (FIXED - moved inside route)
+    // Referral reward
     if (referralCode) {
-      const refUser = await User.findOne({ referralCode: referralCode });
+      const refUser = await User.findOne({ referralCode });
       if (refUser) {
         refUser.referrals += 1;
         refUser.earnings += 100;
@@ -67,41 +48,33 @@ router.post("/signup", async (req, res) => {
       }
     }
 
-    // Send email in background
-    sendEmail(
-      email,
-      "Welcome to Wakflow 🚀",
-      `Hello ${name},
+    // Send email (optional)
+    if (email) {
+      sendEmail(
+        email,
+        "Welcome to Wakflow",
+        `Hello ${name}, your referral code is ${myReferralCode}`
+      ).catch(err => console.log(err));
+    }
 
-Your referral code: ${myReferralCode}
-Your discount: ${discount}%
-
-Login here:
-https://wakflow.com/auth/login.html
-
-- Team Wakflow`
-    ).catch(err => console.log("Email error:", err));
-
-    return res.json({
+    res.json({
       message: "Signup successful",
       referralCode: myReferralCode,
-      discount: discount
+      discount
     });
 
   } catch (error) {
     console.log("Signup error:", error);
-    return res.status(500).json({ message: "Signup error" });
+    res.status(500).json({ message: "Signup error" });
   }
 });
-
-  
 
 
 // ================= LOGIN =================
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-
   try {
+    const { email, password } = req.body;
+
     const user = await User.findOne({ email });
     if (!user) return res.json({ message: "User not found" });
 
@@ -114,10 +87,9 @@ router.post("/login", async (req, res) => {
       { expiresIn: "1d" }
     );
 
-    // IMPORTANT: Send full login data
     res.json({
       message: "Login successful",
-      token: token,
+      token,
       userId: user._id,
       role: user.role,
       referralCode: user.referralCode,
@@ -129,19 +101,8 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-    // IMPORTANT: Added referralCode in response
-    res.json({
-      token: token,
-      userId: user._id,
-      role: user.role,
-      referralCode: user.referralCode
-    });
 
-  } catch (error) {
-    console.log(error);
-    res.json({ message: "Login error" });
-  }
-});
+
 
 
 // ================= CREATE LEAD =================
