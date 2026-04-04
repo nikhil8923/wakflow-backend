@@ -32,7 +32,9 @@ router.post("/signup", async (req, res) => {
     }
 
     const userExists = await User.findOne({ email });
-    if (userExists) return res.json({ message: "User already exists" });
+    if (userExists) {
+      return res.json({ message: "User already exists" });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -55,21 +57,26 @@ router.post("/signup", async (req, res) => {
 
     await user.save();
 
-    await sendEmail(
+    // Send email in background (IMPORTANT)
+    sendEmail(
       email,
       "Welcome to Wakflow 🚀",
       `Hello ${name},
-
-Welcome to Wakflow Automations.
-
 Your referral code: ${myReferralCode}
-Your discount: ${discount}%
+Your discount: ${discount}%`
+    ).catch(err => console.log("Email error:", err));
 
-Login here:
-https://wakflow.com/auth/login.html
+    return res.json({
+      message: "Signup successful",
+      referralCode: myReferralCode,
+      discount: discount
+    });
 
-- Team Wakflow`
-    );
+  } catch (error) {
+    console.log("Signup error:", error);
+    return res.status(500).json({ message: "Signup error" });
+  }
+});
 
     // Referral reward
     if (referralCode) {
@@ -80,18 +87,10 @@ https://wakflow.com/auth/login.html
         await refUser.save();
       }
     }
+    
+   
 
-    res.json({
-      message: "Signup successful",
-      referralCode: myReferralCode,
-      discount: discount
-    });
-
-  } catch (error) {
-    console.log(error);
-    res.json({ message: "Signup error" });
-  }
-});
+  
 
 
 // LOGIN 
