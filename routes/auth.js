@@ -249,6 +249,22 @@ router.get("/dashboard/:userId", async (req, res) => {
     });
   }
 });
+// ================= GET USER LEADS =================
+router.get("/leads/:userId", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.json([]);
+
+    // Find leads referred by this user
+    const leads = await Lead.find({ referredBy: user.referralCode })
+      .sort({ createdAt: -1 });
+
+    res.json(leads);
+  } catch (err) {
+    console.log("Error fetching user leads:", err);
+    res.json([]);
+  }
+});
 
   
 export default router;
