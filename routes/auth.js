@@ -55,7 +55,7 @@ router.post("/signup", async (req, res) => {
 
     await user.save();
 
-    sendEmail(
+    await sendEmail(
       email,
       "Welcome to Wakflow 🚀",
       `Hello ${name},
