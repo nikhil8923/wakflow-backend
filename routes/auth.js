@@ -75,11 +75,19 @@ router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    if (!email || !password) {
+      return res.json({ message: "Please enter email and password" });
+    }
+
     const user = await User.findOne({ email });
-    if (!user) return res.json({ message: "User not found" });
+    if (!user) {
+      return res.json({ message: "User not found" });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.json({ message: "Wrong password" });
+    if (!isMatch) {
+      return res.json({ message: "Wrong password" });
+    }
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
@@ -89,11 +97,11 @@ router.post("/login", async (req, res) => {
 
     res.json({
       message: "Login successful",
-      token,
+      token: token,
       userId: user._id,
       role: user.role,
-      referralCode: user.referralCode,
-      name: user.name
+      name: user.name,
+      referralCode: user.referralCode
     });
 
   } catch (error) {
@@ -101,7 +109,6 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
 
 
 
