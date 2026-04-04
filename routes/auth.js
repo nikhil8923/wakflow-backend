@@ -94,7 +94,7 @@ https://wakflow.com/login.html
 });
 
 
-// ================= LOGIN =================
+// LOGIN 
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
@@ -207,22 +207,46 @@ router.put("/admin/convert-lead/:id", async (req, res) => {
 router.get("/dashboard/:userId", async (req, res) => {
   try {
     const user = await User.findById(req.params.userId);
+    if (!user) {
+      return res.json({
+        name: "",
+        referralCode: "",
+        discount: 0,
+        referrals: 0,
+        conversionRate: 0,
+        earnings: 0,
+        leads: []
+      });
+    }
+
     const leads = await Lead.find({ referredBy: user.referralCode });
 
-    const conversions = leads.filter(l => l.status === "active").length;
+    const conversions = leads.filter(l => l.status === "converted").length;
     const earnings = leads.reduce((sum, l) => sum + (l.commission || 0), 0);
 
     res.json({
-      name: user.name,
-      referralCode: user.referralCode,
-      referrals: leads.length,
-      conversionRate: leads.length ? ((conversions / leads.length) * 100).toFixed(1) : 0,
-      earnings: earnings,
-      leads: leads
+      name: user.name || "",
+      referralCode: user.referralCode || "",
+      discount: user.discount || 0,
+      referrals: leads.length || 0,
+      conversionRate: leads.length
+        ? ((conversions / leads.length) * 100).toFixed(1)
+        : 0,
+      earnings: earnings || 0,
+      leads: leads || []
     });
 
   } catch (err) {
-    res.status(500).json({ message: "Dashboard error" });
+    console.log("Dashboard error:", err);
+    res.json({
+      name: "",
+      referralCode: "",
+      discount: 0,
+      referrals: 0,
+      conversionRate: 0,
+      earnings: 0,
+      leads: []
+    });
   }
 });
 
