@@ -97,7 +97,7 @@ https://wakflow.com/auth/login.html
   
 
 
-// LOGIN 
+// ================= LOGIN =================
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
@@ -114,6 +114,21 @@ router.post("/login", async (req, res) => {
       { expiresIn: "1d" }
     );
 
+    // IMPORTANT: Send full login data
+    res.json({
+      message: "Login successful",
+      token: token,
+      userId: user._id,
+      role: user.role,
+      referralCode: user.referralCode,
+      name: user.name
+    });
+
+  } catch (error) {
+    console.log("Login error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
     // IMPORTANT: Added referralCode in response
     res.json({
       token: token,
