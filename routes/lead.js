@@ -101,41 +101,51 @@ router.get("/dashboard/:userId", async (req, res) => {
     const user = await User.findById(userId);
 
     if (!user) {
-      console.log("User not found:", userId);
+      console.log("❌ User not found:", userId);
       return res.status(404).json({ message: "User not found" });
     }
 
-    const referralCode = user.referralCode || "";
+    const referralCode = user.referralCode;
 
-    let leads = [];
-    if (referralCode) {
-      leads = await Lead.find({ referredBy: referralCode });
+    if (!referralCode) {
+      console.log("⚠️ No referral code for user");
+      return res.json({
+        name: user.name || "",
+        referralCode: "",
+        referrals: 0,
+        earnings: 0,
+        conversionRate: 0,
+        leads: []
+      });
     }
 
-    // ✅ SAFE CALCULATIONS
-    const earnings = Array.isArray(leads)
-      ? leads.reduce((sum, l) => sum + (l?.commission || 0), 0)
-      : 0;
+    const leads = await Lead.find({ referredBy: referralCode });
 
-    const convertedLeads = Array.isArray(leads)
-      ? leads.filter(l => l?.status === "converted")
-      : [];
+    console.log("Leads found:", leads.length);
+
+    let earnings = 0;
+    let convertedCount = 0;
+
+    leads.forEach(l => {
+      earnings += l.commission || 0;
+      if (l.status === "converted") convertedCount++;
+    });
 
     const conversionRate = leads.length
-      ? ((convertedLeads.length / leads.length) * 100).toFixed(1)
+      ? ((convertedCount / leads.length) * 100).toFixed(1)
       : 0;
 
     res.json({
       name: user.name || "",
       referralCode,
-      referrals: leads.length || 0,
+      referrals: leads.length,
       earnings,
       conversionRate,
-      leads: leads || []
+      leads
     });
 
   } catch (error) {
-    console.log("🔥 DASHBOARD ERROR:", error); // 👈 THIS WILL SHOW REAL ERROR
+    console.log("🔥 DASHBOARD CRASH:", error); // ← THIS WILL SHOW REAL ISSUE
     res.status(500).json({ message: "Server error" });
   }
 });
