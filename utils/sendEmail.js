@@ -9,10 +9,16 @@ const transporter = nodemailer.createTransport({
 });
 
 export const sendEmail = async (to, subject, text) => {
+    console.log("EMAIL FUNCTION STARTED");
+  console.log("TO:", to);
   await transporter.sendMail({
     from: "Wakflow <wakflowautomations@gmail.com>",
     to,
     subject,
     text
   });
+  console.log("Email sent successfully");
+  } catch (error) {
+    console.log("EMAIL ERROR:", error);
+  }
 };
