@@ -149,5 +149,36 @@ router.get("/dashboard/:userId", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+// ================= ANALYTICS =================
+router.get("/analytics/:userId", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+
+    if (!user || !user.referralCode) {
+      return res.json({});
+    }
+
+    const leads = await Lead.find({ referredBy: user.referralCode });
+
+    const data = {};
+
+    leads.forEach(l => {
+      const date = new Date(l.createdAt).toLocaleDateString();
+
+      if (!data[date]) {
+        data[date] = { leads: 0, revenue: 0 };
+      }
+
+      data[date].leads += 1;
+      data[date].revenue += l.commission || 0;
+    });
+
+    res.json(data);
+
+  } catch (error) {
+    console.log("Analytics error:", error);
+    res.status(500).json({});
+  }
+});
 
 export default router;
