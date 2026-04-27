@@ -252,22 +252,38 @@ router.get("/leads/:userId", async (req, res) => {
   }
 });
 router.post("/forgot-password", async (req, res) => {
-   console.log("FORGOT PASSWORD API HIT");
-  const { email } = req.body;
-  
+  console.log("🔥 FORGOT API HIT");
 
-  const user = await User.findOne({ email });
-  if (!user) return res.json({ message: "User not found" });
+  try {
+    const { email } = req.body;
+    console.log("📩 Email received:", email);
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const user = await User.findOne({ email });
+    if (!user) {
+      console.log("❌ User not found");
+      return res.json({ message: "User not found" });
+    }
 
-  user.resetOtp = otp;
-  user.resetOtpExpiry = Date.now() + 10 * 60 * 1000; // 10 min
-  await user.save();
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log("🔐 OTP:", otp);
 
-  await sendEmail(email, "Your OTP Code", `Your OTP is ${otp}`);
+    user.resetOtp = otp;
+    user.resetOtpExpiry = Date.now() + 10 * 60 * 1000;
+    await user.save();
 
-  res.json({ message: "OTP sent to email" });
+    console.log("📨 Calling sendEmail...");
+
+    await sendEmail(email, "Your OTP", `OTP is ${otp}`);
+
+    console.log("✅ Email function completed");
+
+    res.json({ message: "OTP sent" });
+
+  } catch (err) {
+    console.log("❌ ERROR IN FORGOT ROUTE:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+
 });
 router.post("/verify-otp", async (req, res) => {
   const { email, otp } = req.body;
