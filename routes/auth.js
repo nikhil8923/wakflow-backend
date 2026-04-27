@@ -252,7 +252,9 @@ router.get("/leads/:userId", async (req, res) => {
   }
 });
 router.post("/forgot-password", async (req, res) => {
+   console.log("FORGOT PASSWORD API HIT");
   const { email } = req.body;
+  
 
   const user = await User.findOne({ email });
   if (!user) return res.json({ message: "User not found" });
