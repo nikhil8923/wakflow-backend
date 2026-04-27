@@ -94,5 +94,37 @@ router.put("/admin/convert-lead/:id", async (req, res) => {
 
   res.json({ message: "Lead converted & commission added" });
 });
+// Dashboard Data
+router.get("/dashboard/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const leads = await Lead.find({ referredBy: user.referralCode });
+
+    const earnings = leads.reduce((sum, l) => sum + (l.commission || 0), 0);
+
+    const convertedLeads = leads.filter(l => l.status === "converted");
+
+    const conversionRate = leads.length
+      ? ((convertedLeads.length / leads.length) * 100).toFixed(1)
+      : 0;
+
+    res.json({
+      name: user.name || "",
+      referralCode: user.referralCode || "",
+      referrals: leads.length || 0,
+      earnings: earnings || 0,
+      conversionRate,
+      leads
+    });
+
+  } catch (error) {
+    console.log("Dashboard error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 export default router;
